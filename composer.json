@@ -1,0 +1,22 @@
+{
+    "name": "lbullard/olive-pdo",
+    "description": "PDO Module for OliveWeb framework",
+    "keywords": ["oliveweb", "pdo", "module", "sql", "mysql"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Luke Bullard",
+            "email": "luke@lukebullard.com"
+        }
+    ],
+    "type": "library",
+    "require": {
+		"php": ">=5.4"
+    },
+	"require-dev": {
+		"phpunit/phpunit": "5.2.*"
+    },
+    "extra": {
+        "installer-name": "pdo"
+    }
+}
