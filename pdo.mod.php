@@ -1,7 +1,7 @@
 <?php
     /**
      * OliveWeb PDO Module
-     * August 2014-June 2018
+     * August 2014-September 2018
      * 
      * @author Luke Bullard
      * @version 1.1
@@ -29,6 +29,9 @@
         
         //current PDO connection
         private $m_currentConnection;
+
+        //current read only PDO connection
+        private $m_currentReadOnlyConnection;
         
         //constructor
         public function __construct()
@@ -72,6 +75,27 @@
                 return;
             }
             $this->chooseConnection($t_autoload);
+        }
+
+        private function loadMySQL($a_hostname, $a_username, $a_password, $a_database, $a_utf8=false)
+        {
+            //build a MySQL DSN (Data Source Name) for the connection
+            $t_dsn = "mysql:host=" . $a_hostname . ";dbname=" . $a_database;
+                    
+            //try to connect to the database
+            try
+            {
+                if ($a_utf8)
+                {
+                    $t_dsn .= ";charset=utf8";
+                    return new PDO($t_dsn, $a_username, $a_password, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+                } else {
+                    return new PDO($t_dsn, $a_username, $a_password);
+                }
+            } catch (PDOException $e_databaseConnection)
+            {
+                return ERR_PDO_CONNECTION;
+            }
         }
         
         /**
@@ -127,23 +151,48 @@
                     {
                         $t_utf8 = $this->m_connections[$a_key]["utf8"];
                     }
-                    
-                    //build a MySQL DSN (Data Source Name) for the connection
-                    $t_dsn = "mysql:host=" . $t_hostname . ";dbname=" . $t_database;
-                    
-                    //try to connect to the database
-                    try
-                    {
-                        if ($t_utf8)
-                        {
-                            $t_dsn .= ";charset=utf8";
-                            $this->m_connections[$a_key]["connection"] = new PDO($t_dsn,$t_username,$t_password, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
-                        } else {
-                            $this->m_connections[$a_key]["connection"] = new PDO($t_dsn,$t_username,$t_password);
-                        }
-                    } catch (PDOException $e_databaseConnection)
+
+                    $t_connection = $this->loadMySQLConnection($t_hostname, $t_username, $t_password, $t_database, $t_utf8);
+                    if ($t_connection === ERR_PDO_CONNECTION)
                     {
                         return ERR_PDO_CONNECTION;
+                    }
+
+                    $this->m_connections[$a_key]["connection"] = $t_connection;
+
+                    //load read only connection
+                    if (isset($this->m_connections[$a_key]["read_only"]))
+                    {
+                        //if the connection doesn't have all the necessary fields, return error code.
+                        if (!isset($this->m_connections[$a_key]["read_only"]["username"]
+                                    ,$this->m_connections[$a_key]["read_only"]["password"]
+                                    ,$this->m_connections[$a_key]["read_only"]["hostname"]
+                                    ,$this->m_connections[$a_key]["read_only"]["database"])
+                            )
+                        {
+                            return ERR_PDO_CREDENTIALS;
+                        }
+                        
+                        //make temporary variables for the fields for easy access
+                        $t_username = $this->m_connections[$a_key]["read_only"]["username"];
+                        $t_password = $this->m_connections[$a_key]["read_only"]["password"];
+                        $t_hostname = $this->m_connections[$a_key]["read_only"]["hostname"];
+                        $t_database = $this->m_connections[$a_key]["read_only"]["database"];
+                        
+                        $t_utf8 = false;
+
+                        if (isset($this->m_connections[$a_key]["read_only"]["utf8"]))
+                        {
+                            $t_utf8 = $this->m_connections[$a_key]["read_only"]["utf8"];
+                        }
+
+                        $t_connection = $this->loadMySQLConnection($t_hostname, $t_username, $t_password, $t_database, $t_utf8);
+                        if ($t_connection === ERR_PDO_CONNECTION)
+                        {
+                            return ERR_PDO_CONNECTION;
+                        }
+
+                        $this->m_connections[$a_key]["connection_read_only"] = $t_connection;
                     }
                     break;
                 default:
@@ -192,6 +241,13 @@
             
             //set the current connection to the new, chosen one's connection
             $this->m_currentConnection = $this->m_connections[$a_key]["connection"];
+            $this->m_currentReadOnlyConnection = $this->m_connections[$a_key]["connection"];
+            
+            //if the read only connection is setup, use that for selects
+            if (isset($this->m_connections[$a_key]["connection_read_only"]))
+            {
+                $this->m_currentReadOnlyConnection = $this->m_connections[$a_key]["connection_read_only"];
+            }
             
             //success, return true
             return true;
@@ -265,7 +321,7 @@
         public function select()
         {
             //if there is no current connection, return error code
-            if (!isset($this->m_currentConnection))
+            if (!isset($this->m_currentReadOnlyConnection))
             {
                 return ERR_PDO_MISSING;
             }
@@ -277,7 +333,7 @@
             $t_sql = array_shift($t_args);
             
             //prepare a statement with this SQL query string
-            $t_statement = $this->m_currentConnection->prepare($t_sql);
+            $t_statement = $this->m_currentReadOnlyConnection->prepare($t_sql);
             
             //if the preparing failed, return error code
             if ($t_statement === false)

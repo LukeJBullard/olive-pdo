@@ -21,6 +21,11 @@
      *          username => The username to authenticate with
      *          password => The password to authenticate with
      *          utf8 => Boolean, if the database is mysql and uses a UTF8 characterset. If the database uses UTF8 and this isn't set, weird things will happen
+     *          
+     *          //for read replicas. all select() calls go to this connection. optional
+     *          read_only => array(
+     *              //options are the same as above. driver must be the same as the parent connection
+     *          )
      *      )
      */
     $pdo_config = array(
@@ -36,6 +41,13 @@
             ,"password" => "password"
             ,"database" => "mydatabase"
             ,"utf8" => false
+            ,"read_only" => array(
+                "hostname" => "readonly.myserver.com"
+                ,"username" => "readonlyuser"
+                ,"password" => "readonly"
+                ,"database" => "mydatabase"
+                ,"utf8" => false
+            )
         )
     );
 ?>
