@@ -160,6 +160,8 @@
 
                     $this->m_connections[$a_key]["connection"] = $t_connection;
 
+                    $this->m_connections[$a_key]["connection"]->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
                     //load read only connection
                     if (isset($this->m_connections[$a_key]["read_only"]))
                     {
@@ -193,7 +195,10 @@
                         }
 
                         $this->m_connections[$a_key]["connection_read_only"] = $t_connection;
+
+                        $this->m_connections[$a_key]["connection_read_only"]->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                     }
+
                     break;
                 default:
                     //driver not found. return error code
