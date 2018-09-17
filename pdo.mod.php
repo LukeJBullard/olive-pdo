@@ -77,7 +77,7 @@
             $this->chooseConnection($t_autoload);
         }
 
-        private function loadMySQL($a_hostname, $a_username, $a_password, $a_database, $a_utf8=false)
+        private function loadMySQLConnection($a_hostname, $a_username, $a_password, $a_database, $a_utf8=false)
         {
             //build a MySQL DSN (Data Source Name) for the connection
             $t_dsn = "mysql:host=" . $a_hostname . ";dbname=" . $a_database;
